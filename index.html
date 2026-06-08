@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>交期資料分列</title>
+    <style>
+      :root {
+        --bg: #f3efe6;
+        --panel: #fffdf7;
+        --ink: #1d2a32;
+        --sub: #5e6b73;
+        --accent: #1f6f78;
+        --accent-2: #f2a65a;
+        --line: #d7d2c7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 10%, #fff8e8 0, transparent 30%),
+          radial-gradient(circle at 90% 85%, #f5d4a8 0, transparent 25%),
+          linear-gradient(135deg, #ece7dc, #f8f4eb 50%, #efe6d4);
+        min-height: 100vh;
+      }
+
+      .wrap {
+        width: min(1100px, 94vw);
+        margin: 28px auto;
+        padding: 18px;
+      }
+
+      .card {
+        background: color-mix(in oklab, var(--panel) 92%, white 8%);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 20px 40px rgba(29, 42, 50, 0.08);
+        overflow: hidden;
+      }
+
+      .head {
+        position: relative;
+        padding: 20px;
+        background: linear-gradient(90deg, var(--accent), #2f8a95 50%, #66b6be);
+        color: white;
+      }
+
+      .head-auth {
+        position: static;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+      }
+
+      .head-auth button {
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        background: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .head-auth button:disabled {
+        opacity: 0.55;
+      }
+
+      .head h1 {
+        margin: 0;
+        font-size: clamp(1.2rem, 2.4vw, 1.7rem);
+      }
+
+      .head p {
+        margin: 8px 0 0;
+        font-size: 0.95rem;
+        opacity: 0.95;
+      }
+
+      .tools {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .page-switch {
+        display: flex;
+        gap: 10px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--line);
+        background: #f8f2e5;
+      }
+
+      .page-switch button {
+        background: #e4d7bc;
+        color: #364147;
+      }
+
+      .page-switch button.active {
+        background: #1f6f78;
+        color: white;
+      }
+
+      .field {
+        margin-bottom: 10px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 6px;
+        color: #3f4a50;
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .field input {
+        width: 100%;
+        border: 1px solid #c9c2b3;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font: 500 14px/1.4 "JetBrains Mono", "Consolas", monospace;
+        color: #2d3a40;
+        background: #fffefb;
+      }
+
+      .field select {
+        width: 100%;
+        border: 1px solid #c9c2b3;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font: 500 14px/1.4 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+        color: #2d3a40;
+        background: #fffefb;
+      }
+
+      .th-sort {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .sort-toggle {
+        border: 1px solid #9ab9bd;
+        background: #e7f2f3;
+        color: #24545a;
+        border-radius: 8px;
+        padding: 2px 8px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      }
+
+      .sort-toggle:hover {
+        background: #d4eaec;
+        border-color: #7ca9ae;
+      }
+
+      .sort-toggle:active {
+        background: #1f6f78;
+        border-color: #1f6f78;
+        color: #ffffff;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 220px;
+        border: 1px solid #c9c2b3;
+        border-radius: 12px;
+        padding: 12px;
+        font: 500 14px/1.5 "JetBrains Mono", "Consolas", monospace;
+        resize: vertical;
+        color: #2d3a40;
+        background: #fffefb;
+      }
+
+      .actions {
+        margin-top: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: var(--accent);
+        color: white;
+      }
+
+      .ghost {
+        background: #e9dfca;
+        color: #39464d;
+      }
+
+      #status {
+        color: var(--sub);
+        font-size: 0.9rem;
+      }
+
+      #status.error {
+        color: #c0392b;
+        font-weight: 700;
+      }
+        #authStatus {
+          color: #ffffff;
+          font-size: 0.85rem;
+          font-weight: 700;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        #authDomainHint {
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 0.78rem;
+        }
+
+      .table-wrap {
+        padding: 20px;
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 680px;
+      }
+
+      thead th {
+        text-align: left;
+        background: #f0e8d8;
+        color: #3f4a50;
+        font-size: 0.9rem;
+        letter-spacing: 0.02em;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+      }
+
+      tbody tr:nth-child(odd) {
+        background: #fffef9;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #fbf7ee;
+      }
+
+      .qty {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .foot {
+        padding: 0 20px 20px;
+        color: #657179;
+        font-size: 0.85rem;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .pager {
+        padding: 0 20px 20px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .pager-info {
+        color: #5e6b73;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 700px) {
+        .wrap {
+          width: 96vw;
+          margin: 14px auto;
+          padding: 8px;
+        }
+
+        .tools,
+        .table-wrap,
+        .foot {
+          padding: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="card">
+        <header class="head">
+          <div class="head-auth">
+            <button id="loginBtn">Google 登入</button>
+            <button id="logoutBtn" disabled>登出</button>
+            <span id="authStatus">未登入</span>
+            <span id="authDomainHint"></span>
+          </div>
+          <h1>產品資料分列工具</h1>
+          <p>將原始採購文字轉為「產品料號、版本、數量、期望交期」四欄。</p>
+        </header>
+
+        <div class="page-switch">
+          <button id="parsePageBtn" class="active">資料解析</button>
+          <button id="queryPageBtn">訂單查詢</button>
+        </div>
+
+        <section id="parsePage" class="tools">
+          <div class="field">
+            <label for="vendorNoInput">vender no.</label>
+            <input id="vendorNoInput" type="text" placeholder="請輸入 vender no." />
+          </div>
+          <textarea id="rawInput" aria-label="原始資料"></textarea>
+          <div class="actions">
+            <button class="primary" id="parseBtn">解析資料</button>
+            <button class="primary" id="saveBtn">存進 Firebase</button>
+            <button class="ghost" id="sampleBtn">載入範例</button>
+            <span id="status"></span>
+          </div>
+        </section>
+
+        <section id="parseTableSection" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>vender no.</th>
+                <th>產品料號</th>
+                <th>版本</th>
+                <th>數量</th>
+                <th>期望交期</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </section>
+
+        <section id="queryPage" class="tools hidden">
+          <div class="field">
+            <label for="queryVendorNoInput">查詢 vender no.</label>
+            <input id="queryVendorNoInput" type="text" placeholder="輸入 vender no. 可查指定訂單；留空則載入全部" />
+          </div>
+          <div class="field">
+            <label for="queryMonthInput">查詢月份</label>
+            <input id="queryMonthInput" type="month" />
+          </div>
+          <div class="actions">
+            <button class="primary" id="loadOrdersBtn">查詢訂單</button>
+            <span id="queryStatus"></span>
+          </div>
+        </section>
+
+        <section id="queryTableSection" class="table-wrap hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>vender no.</th>
+                <th>產品料號</th>
+                <th>版本</th>
+                <th>數量</th>
+                <th>
+                  <span class="th-sort">
+                    期望交期
+                    <button id="dueDateSortBtn" class="sort-toggle" type="button">近→遠</button>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="queryTableBody"></tbody>
+          </table>
+        </section>
+
+        <div id="queryPager" class="pager hidden">
+          <button class="ghost" id="prevPageBtn">上一頁</button>
+          <button class="ghost" id="nextPageBtn">下一頁</button>
+          <span id="pageInfo" class="pager-info"></span>
+        </div>
+
+        <p class="foot">規則：每筆資料會以最後的日期（YYYY-MM-DD）視為該筆結尾，並擷取指定欄位。若要寫入 Firebase，請先在程式碼填入 Firebase 設定。</p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+      import {
+        getFirestore,
+        addDoc,
+        collection,
+        getDocs,
+        query,
+        where,
+        limit,
+        serverTimestamp,
+      } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+        import {
+          getAuth,
+          GoogleAuthProvider,
+          signInWithPopup,
+          signInWithRedirect,
+          onAuthStateChanged,
+          signOut as firebaseSignOut,
+        } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+      const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCFM_WFJTSXOEr_RUEu4jrvmfJuNCH2wiQ",
+      authDomain: "cy12-c5dd8.firebaseapp.com",
+      projectId: "cy12-c5dd8",
+      storageBucket: "cy12-c5dd8.firebasestorage.app",
+      messagingSenderId: "213375197242",
+      appId: "1:213375197242:web:475077496f2ff8f7a19503",
+      measurementId: "G-8NFSLRH0CW"
+};
+      const COLLECTION_NAME = "purchaseRows";
+
+      let db = null;
+        let auth = null;
+        let currentUser = null;
+
+      function isFirebaseConfigReady(config) {
+        return Boolean(config.apiKey && config.projectId && config.appId);
+      }
+
+      if (isFirebaseConfigReady(FIREBASE_CONFIG)) {
+        const app = initializeApp(FIREBASE_CONFIG);
+        db = getFirestore(app);
+          auth = getAuth(app);
+      }
+
+      const SAMPLE_TEXT = `0011034B-00 4 CLAMP H-BLOCK SEAT SUPPORT 1,400 Each 280 107.00 149,800.00 2026-07-20
+0022130A-00 0 6x1½ in ALUMINUM NEWTON ULTRACASTER RIM 500 Each 50 326.00 163,000.00 2026-07-20
+0033032D-00 1 L ARMREST SUPPORT 100 Each 90 198.00 19,800.00 2026-07-20
+0033157B-00 1 FIXED FRAME SWING AWAY ARMREST RECEIVER,
+RIGHT
+400 Each 125 348.00 139,200.00 2026-07-20
+0033158B-00 1 FIXED FRAME SWING AWAY ARMREST RECEIVER,
+LEFT
+400 Each 125 348.00 139,200.00 2026-07-20
+0011017D-00 4 2 in 1 BACK COVER 4,000 Each 1000 27.00 108,000.00 2026-07-20
+0031235A-00 1 RIGHT PLASTIC ANGLE ADJUSTABLE FOOTPLATE
+EXTRUSION
+2,000 Each 120 76.00 152,000.00 2026-07-20
+0031236A-00 1 LEFT PLASTIC ANGLE ADJUSTABLE FOOTPLATE
+EXTRUSION
+1,000 Each 120 76.00 76,000.00 2026-07-20
+0041008C-00 2 WHEEL LOCK CLAMP 4,000 Each 500 33.00 132,000.00 2026-07-20
+0016476A-00 5 V2 NEWTON PTL MAIN BODY 10,000 Each 1 59.00 590,000.00 2026-08-10`;
+
+      const rawInput = document.getElementById("rawInput");
+      const vendorNoInput = document.getElementById("vendorNoInput");
+      const parseBtn = document.getElementById("parseBtn");
+      const saveBtn = document.getElementById("saveBtn");
+      const sampleBtn = document.getElementById("sampleBtn");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const authStatusEl = document.getElementById("authStatus");
+      const authDomainHintEl = document.getElementById("authDomainHint");
+      const parsePageBtn = document.getElementById("parsePageBtn");
+      const queryPageBtn = document.getElementById("queryPageBtn");
+      const parsePage = document.getElementById("parsePage");
+      const queryPage = document.getElementById("queryPage");
+      const parseTableSection = document.getElementById("parseTableSection");
+      const queryTableSection = document.getElementById("queryTableSection");
+      const loadOrdersBtn = document.getElementById("loadOrdersBtn");
+      const queryVendorNoInput = document.getElementById("queryVendorNoInput");
+      const queryMonthInput = document.getElementById("queryMonthInput");
+      const dueDateSortBtn = document.getElementById("dueDateSortBtn");
+      const queryPager = document.getElementById("queryPager");
+      const prevPageBtn = document.getElementById("prevPageBtn");
+      const nextPageBtn = document.getElementById("nextPageBtn");
+      const pageInfo = document.getElementById("pageInfo");
+      const tableBody = document.getElementById("tableBody");
+      const queryTableBody = document.getElementById("queryTableBody");
+      const statusEl = document.getElementById("status");
+      const queryStatusEl = document.getElementById("queryStatus");
+      let parsedRows = [];
+      let queryRows = [];
+      let currentPage = 1;
+      let dueDateSortOrder = "asc";
+      const PAGE_SIZE = 20;
+
+      function splitRecords(text) {
+        const lines = text
+          .replace(/\r/g, "")
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean);
+
+        const records = [];
+        let bucket = [];
+
+        for (const line of lines) {
+          bucket.push(line);
+          if (/\d{4}-\d{2}-\d{2}\s*$/.test(line)) {
+            records.push(bucket.join(" "));
+            bucket = [];
+          }
+        }
+
+        if (bucket.length > 0) {
+          records.push(bucket.join(" "));
+        }
+
+        return records;
+      }
+
+      function parseRecord(record) {
+        const withoutVendorPattern = /^(\S+)\s+(\d+)\s+.+?\s+([\d,]+)\s+Each\s+[\d,]+\s+[\d,.]+\s+[\d,.]+\s+(\d{4}-\d{2}-\d{2})$/;
+        const withoutVendor = record.match(withoutVendorPattern);
+        if (!withoutVendor) return null;
+
+        return {
+          partNo: withoutVendor[1],
+          version: withoutVendor[2],
+          qty: Number(withoutVendor[3].replace(/,/g, "")),
+          dueDate: withoutVendor[4],
+        };
+      }
+
+      function renderRows(rows) {
+        tableBody.innerHTML = "";
+
+        for (const row of rows) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.vendorNo || "-"}</td>
+            <td>${row.partNo}</td>
+            <td>${row.version}</td>
+            <td class="qty">${row.qty.toLocaleString("en-US")}</td>
+            <td>${row.dueDate}</td>
+          `;
+          tableBody.appendChild(tr);
+        }
+      }
+
+      function renderQueryRows(rows) {
+        queryTableBody.innerHTML = "";
+
+        for (const row of rows) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.vendorNo || "-"}</td>
+            <td>${row.partNo || "-"}</td>
+            <td>${row.version || "-"}</td>
+            <td class="qty">${Number(row.qty || 0).toLocaleString("en-US")}</td>
+            <td>${row.dueDate || "-"}</td>
+          `;
+          queryTableBody.appendChild(tr);
+        }
+      }
+
+      function sortByDueDate(rows, order) {
+        return [...rows].sort((a, b) => {
+          const aDate = Date.parse(a.dueDate || "");
+          const bDate = Date.parse(b.dueDate || "");
+
+          if (Number.isNaN(aDate) && Number.isNaN(bDate)) return 0;
+          if (Number.isNaN(aDate)) return 1;
+          if (Number.isNaN(bDate)) return -1;
+          return order === "desc" ? bDate - aDate : aDate - bDate;
+        });
+      }
+
+      function renderQueryPager(totalRows) {
+        const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
+        currentPage = Math.min(currentPage, totalPages);
+
+        prevPageBtn.disabled = currentPage <= 1;
+        nextPageBtn.disabled = currentPage >= totalPages;
+        pageInfo.textContent = `第 ${currentPage} / ${totalPages} 頁，共 ${totalRows} 筆`;
+        queryPager.classList.remove("hidden");
+      }
+
+      function applyQueryView() {
+        const selectedMonth = queryMonthInput.value;
+        const monthFilteredRows = selectedMonth
+          ? queryRows.filter((row) => (row.dueDate || "").startsWith(selectedMonth))
+          : queryRows;
+        const sortedRows = sortByDueDate(monthFilteredRows, dueDateSortOrder);
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const pagedRows = sortedRows.slice(start, start + PAGE_SIZE);
+        renderQueryRows(pagedRows);
+        renderQueryPager(sortedRows.length);
+      }
+
+      function showParsePage() {
+        parsePage.classList.remove("hidden");
+        parseTableSection.classList.remove("hidden");
+        queryPage.classList.add("hidden");
+        queryTableSection.classList.add("hidden");
+        queryPager.classList.add("hidden");
+        parsePageBtn.classList.add("active");
+        queryPageBtn.classList.remove("active");
+      }
+
+      function showQueryPage() {
+        queryPage.classList.remove("hidden");
+        queryTableSection.classList.remove("hidden");
+        parsePage.classList.add("hidden");
+        parseTableSection.classList.add("hidden");
+        queryPageBtn.classList.add("active");
+        parsePageBtn.classList.remove("active");
+      }
+
+      function parseAndRender() {
+        const vendorNo = vendorNoInput.value.trim();
+        const input = rawInput.value.trim();
+        if (!vendorNo || !input) {
+          tableBody.innerHTML = "";
+          parsedRows = [];
+          setStatus("需輸入資料");
+          return;
+        }
+
+        const records = splitRecords(input);
+        const rows = records
+          .map(parseRecord)
+          .filter(Boolean)
+          .map((row) => ({
+            vendorNo,
+            ...row,
+          }));
+        parsedRows = rows;
+        renderRows(rows);
+
+        const skipped = records.length - rows.length;
+        setStatus(`已解析 ${rows.length} 筆資料` + (skipped > 0 ? `，略過 ${skipped} 筆格式不符資料` : ""));
+      }
+
+      function getFriendlyFirebaseError(error) {
+        const code = error?.code || "unknown";
+        const map = {
+          "permission-denied": "權限不足：請到 Firestore Rules 開放寫入，或先完成登入驗證。",
+          "failed-precondition": "前置條件不符：請確認 Firestore Database 已建立（非 Realtime Database）。",
+          unavailable: "服務暫時不可用：請檢查網路後再試。",
+          unauthenticated: "尚未驗證：目前規則可能要求登入後才能寫入。",
+        };
+
+        return {
+          code,
+          detail: map[code] || error?.message || "未知錯誤",
+        };
+      }
+
+      function getFriendlyAuthError(error) {
+        const code = error?.code || "unknown";
+        const map = {
+          "auth/popup-blocked": "瀏覽器擋住登入彈窗，已改用跳轉登入。",
+          "auth/popup-closed-by-user": "登入視窗被關閉，請再試一次。",
+          "auth/operation-not-allowed": "尚未在 Firebase Authentication 啟用 Google 登入。",
+          "auth/unauthorized-domain": "目前網域未加入 Firebase Authentication 的 Authorized domains。",
+        };
+        return map[code] || error?.message || "登入失敗，請檢查 Firebase Auth 設定。";
+      }
+
+      function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.classList.toggle("error", isError);
+      }
+
+      function updateAuthDomainHint() {
+        const host = window.location.host || "(unknown)";
+        authDomainHintEl.textContent = `目前網域：${host}`;
+      }
+
+        function updateAuthUI() {
+          const loggedIn = Boolean(currentUser);
+          loginBtn.disabled = loggedIn;
+          logoutBtn.disabled = !loggedIn;
+          saveBtn.disabled = !loggedIn;
+          authStatusEl.textContent = loggedIn
+            ? `已登入：${currentUser.displayName || currentUser.email || "使用者"}`
+            : "未登入";
+        }
+
+      async function saveParsedRowsToFirebase() {
+        if (!db) {
+          setStatus("Firebase 尚未設定，請先填入 FIREBASE_CONFIG。");
+          return;
+        }
+          if (!currentUser) {
+            setStatus("請先登入後再存進 Firebase。", true);
+            return;
+          }
+
+        if (parsedRows.length === 0) {
+          setStatus("目前沒有可儲存資料，請先解析。");
+          return;
+        }
+
+        const vendorNo = parsedRows[0].vendorNo;
+        if (!vendorNo) {
+          setStatus("需輸入資料");
+          return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = "儲存中...";
+
+        try {
+          const duplicateQuery = query(
+            collection(db, COLLECTION_NAME),
+            where("vendorNo", "==", vendorNo),
+            limit(1)
+          );
+          const existing = await getDocs(duplicateQuery);
+          if (!existing.empty) {
+            setStatus("已重複輸入", true);
+            return;
+          }
+
+          const writeJobs = parsedRows.map((row) =>
+            addDoc(collection(db, COLLECTION_NAME), {
+              ...row,
+              createdAt: serverTimestamp(),
+            })
+          );
+
+          const docs = await Promise.all(writeJobs);
+          setStatus(`已成功存入 Firebase：${parsedRows.length} 筆（專案 ${FIREBASE_CONFIG.projectId} / collection ${COLLECTION_NAME}）`);
+          console.info("Firestore write success", docs.map((d) => d.id));
+        } catch (error) {
+          const friendly = getFriendlyFirebaseError(error);
+          setStatus(`Firebase 寫入失敗（${friendly.code}）：${friendly.detail}`);
+          console.error("Firestore write error", error);
+        } finally {
+          saveBtn.disabled = !currentUser;
+          saveBtn.textContent = "存進 Firebase";
+        }
+      }
+
+      async function loadOrdersFromFirebase() {
+        if (!db) {
+          queryStatusEl.textContent = "Firebase 尚未設定，請先填入 FIREBASE_CONFIG。";
+          return;
+        }
+
+        const queryVendorNo = queryVendorNoInput.value.trim();
+
+        loadOrdersBtn.disabled = true;
+        loadOrdersBtn.textContent = "載入中...";
+
+        try {
+          const baseCollection = collection(db, COLLECTION_NAME);
+          const source = queryVendorNo
+            ? query(baseCollection, where("vendorNo", "==", queryVendorNo))
+            : baseCollection;
+          const snapshot = await getDocs(source);
+          queryRows = snapshot.docs.map((doc) => doc.data());
+          currentPage = 1;
+          applyQueryView();
+          const selectedMonth = queryMonthInput.value;
+          const afterMonthFilter = selectedMonth
+            ? queryRows.filter((row) => (row.dueDate || "").startsWith(selectedMonth)).length
+            : queryRows.length;
+          queryStatusEl.textContent = queryVendorNo
+            ? `vender no. ${queryVendorNo} 查詢結果：${afterMonthFilter} 筆`
+            : `已載入 ${afterMonthFilter} 筆資料`;
+        } catch (error) {
+          const friendly = getFriendlyFirebaseError(error);
+          queryStatusEl.textContent = `讀取失敗（${friendly.code}）：${friendly.detail}`;
+        } finally {
+          loadOrdersBtn.disabled = false;
+          loadOrdersBtn.textContent = "查詢訂單";
+        }
+      }
+
+      parseBtn.addEventListener("click", parseAndRender);
+      saveBtn.addEventListener("click", saveParsedRowsToFirebase);
+      loginBtn.addEventListener("click", async () => {
+        if (!auth) {
+          setStatus("Firebase 尚未設定，無法登入。", true);
+          return;
+        }
+
+        if (window.location.protocol === "file:") {
+          setStatus("請改用 http 網址開啟（例如 http://localhost:5500），file:// 無法使用 Firebase 登入。", true);
+          return;
+        }
+
+        try {
+          const provider = new GoogleAuthProvider();
+          await signInWithPopup(auth, provider);
+          setStatus("登入成功，可存進 Firebase。");
+        } catch (error) {
+          if (error?.code === "auth/popup-blocked") {
+            try {
+              const provider = new GoogleAuthProvider();
+              await signInWithRedirect(auth, provider);
+              return;
+            } catch (redirectError) {
+              setStatus(`登入失敗：${getFriendlyAuthError(redirectError)}`, true);
+              return;
+            }
+          }
+
+          setStatus(`登入失敗（${error?.code || "unknown"}）：${getFriendlyAuthError(error)}`, true);
+        }
+      });
+        logoutBtn.addEventListener("click", async () => {
+          if (!auth) return;
+          try {
+            await firebaseSignOut(auth);
+            setStatus("已登出。", false);
+          } catch (error) {
+            setStatus(`登出失敗：${error.message}`, true);
+          }
+        });
+      parsePageBtn.addEventListener("click", showParsePage);
+      queryPageBtn.addEventListener("click", () => {
+        showQueryPage();
+        loadOrdersFromFirebase();
+      });
+      loadOrdersBtn.addEventListener("click", loadOrdersFromFirebase);
+      dueDateSortBtn.addEventListener("click", () => {
+        dueDateSortOrder = dueDateSortOrder === "asc" ? "desc" : "asc";
+        dueDateSortBtn.textContent = dueDateSortOrder === "asc" ? "近→遠" : "遠→近";
+        currentPage = 1;
+        applyQueryView();
+      });
+      queryMonthInput.addEventListener("change", () => {
+        currentPage = 1;
+        applyQueryView();
+      });
+      prevPageBtn.addEventListener("click", () => {
+        if (currentPage <= 1) return;
+        currentPage -= 1;
+        applyQueryView();
+      });
+      nextPageBtn.addEventListener("click", () => {
+        const totalPages = Math.max(1, Math.ceil(queryRows.length / PAGE_SIZE));
+        if (currentPage >= totalPages) return;
+        currentPage += 1;
+        applyQueryView();
+      });
+      sampleBtn.addEventListener("click", () => {
+        rawInput.value = SAMPLE_TEXT;
+        setStatus("已載入範例，請輸入 vender no. 後按解析資料。");
+      });
+
+      if (auth) {
+        onAuthStateChanged(auth, (user) => {
+          currentUser = user;
+          updateAuthUI();
+        });
+      } else {
+        updateAuthUI();
+      }
+
+      rawInput.value = SAMPLE_TEXT;
+      setStatus("請先輸入 vender no. 與資料後再解析。");
+      updateAuthDomainHint();
+      showParsePage();
+    </script>
+  </body>
+</html>
