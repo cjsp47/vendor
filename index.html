@@ -679,6 +679,13 @@ EXTRUSION
         authDomainHintEl.textContent = `目前網域：${host}`;
       }
 
+      function resetInputs() {
+        vendorNoInput.value = "";
+        rawInput.value = "";
+        queryVendorNoInput.value = "";
+        queryMonthInput.value = "";
+      }
+
         function updateAuthUI() {
           const loggedIn = Boolean(currentUser);
           loginBtn.disabled = loggedIn;
@@ -858,7 +865,7 @@ EXTRUSION
         updateAuthUI();
       }
 
-      rawInput.value = SAMPLE_TEXT;
+      resetInputs();
       setStatus("請先輸入 vender no. 與資料後再解析。");
       updateAuthDomainHint();
       showParsePage();
