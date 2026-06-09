@@ -207,6 +207,89 @@
         color: #39464d;
       }
 
+      .btn-small {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        margin-right: 6px;
+        border: 0;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .btn-edit {
+        background: #66b6be;
+        color: white;
+      }
+
+      .btn-edit:hover {
+        background: #4a9da5;
+      }
+
+      .btn-delete {
+        background: #c0392b;
+        color: white;
+      }
+
+      .btn-delete:hover {
+        background: #a03425;
+      }
+
+      .editable {
+        background: #fffdf0;
+        outline: none;
+        min-width: 60px;
+      }
+
+      .editable:focus {
+        box-shadow: 0 0 0 2px rgba(31,111,120,0.12);
+      }
+
+      .progress {
+        position: relative;
+        width: 120px;
+        height: 14px;
+        background: #f0f0f0;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #66b6be, #1f6f78);
+        transition: width 0.2s ease;
+      }
+
+      .progress-label {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #073b3f;
+        font-weight: 700;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+        pointer-events: none;
+      }
+
+      /* Color tiers for progress */
+      .progress-bar.low {
+        background: linear-gradient(90deg, #f06565, #e63946); /* red */
+      }
+
+      .progress-bar.mid {
+        background: linear-gradient(90deg, #ffd700, #ffea6a); /* yellow */
+      }
+
+      .progress-bar.high {
+        background: linear-gradient(90deg, #3b82f6, #2b6de0); /* blue */
+      }
+
+      .progress-bar.full {
+        background: linear-gradient(90deg, #34d399, #10b981); /* green for 100% */
+      }
+
       #status {
         color: var(--sub);
         font-size: 0.9rem;
@@ -358,11 +441,17 @@
             <input id="queryVendorNoInput" type="text" placeholder="輸入 vender no. 可查指定訂單；留空則載入全部" />
           </div>
           <div class="field">
+            <label for="queryPartNoInput">查詢產品料號</label>
+            <input id="queryPartNoInput" type="text" placeholder="輸入產品料號進行查詢" />
+          </div>
+          <div class="field">
             <label for="queryMonthInput">查詢月份</label>
             <input id="queryMonthInput" type="month" />
           </div>
           <div class="actions">
             <button class="primary" id="loadOrdersBtn">查詢訂單</button>
+            <button class="ghost" id="exportExcelBtn">匯出 Excel</button>
+            <button class="ghost" id="exportPdfBtn">匯出 PDF</button>
             <span id="queryStatus"></span>
           </div>
         </section>
@@ -381,10 +470,15 @@
                     <button id="dueDateSortBtn" class="sort-toggle" type="button">近→遠</button>
                   </span>
                 </th>
+                <th>修改日期</th>
+                <th>進度</th>
+                <th>已交數量</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody id="queryTableBody"></tbody>
           </table>
+          <div id="queryTotals" class="foot hidden"></div>
         </section>
 
         <div id="queryPager" class="pager hidden">
@@ -397,6 +491,9 @@
       </section>
     </main>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-Bu+J+pX1zp/xHXH4l1ewDq6dKk3Cl0InGCzjnAeJOJcJ6Q33ZYB90k6n6uYRhrCiApu5Hq4/haYW+69jeQeUvA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-xPxvG6nR70aEtYfvZc8+QiEB3T3OovwlYYfMNKBJfZVTnq4rFfgpT5Jv3xz2jMfnmB6CY3/6jINETuXPXY9g4A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js" integrity="sha512-Qf3d9Bv6oGIKRm5m7YiofXb7PTEX3g1oZqGQ/PX0IhGdUCd0R2ioh/o0157oGVq4UvyxTxX/7DjiB5l0/R3ANIQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
       import {
@@ -408,6 +505,9 @@
         where,
         limit,
         serverTimestamp,
+        deleteDoc,
+        doc,
+        updateDoc,
       } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
         import {
           getAuth,
@@ -479,6 +579,7 @@ EXTRUSION
       const queryTableSection = document.getElementById("queryTableSection");
       const loadOrdersBtn = document.getElementById("loadOrdersBtn");
       const queryVendorNoInput = document.getElementById("queryVendorNoInput");
+      const queryPartNoInput = document.getElementById("queryPartNoInput");
       const queryMonthInput = document.getElementById("queryMonthInput");
       const dueDateSortBtn = document.getElementById("dueDateSortBtn");
       const queryPager = document.getElementById("queryPager");
@@ -487,10 +588,14 @@ EXTRUSION
       const pageInfo = document.getElementById("pageInfo");
       const tableBody = document.getElementById("tableBody");
       const queryTableBody = document.getElementById("queryTableBody");
+      const queryTotals = document.getElementById("queryTotals");
+      const exportExcelBtn = document.getElementById("exportExcelBtn");
+      const exportPdfBtn = document.getElementById("exportPdfBtn");
       const statusEl = document.getElementById("status");
       const queryStatusEl = document.getElementById("queryStatus");
       let parsedRows = [];
       let queryRows = [];
+      let currentRenderedQueryRows = [];
       let currentPage = 1;
       let dueDateSortOrder = "asc";
       const PAGE_SIZE = 20;
@@ -521,15 +626,22 @@ EXTRUSION
       }
 
       function parseRecord(record) {
-        const withoutVendorPattern = /^(\S+)\s+(\d+)\s+.+?\s+([\d,]+)\s+Each\s+[\d,]+\s+[\d,.]+\s+[\d,.]+\s+(\d{4}-\d{2}-\d{2})$/;
+        const withoutVendorPattern = /^(\S+)\s+(.+?)\s+([\d,]+)\s+Each\s+[\d,]+\s+[\d,.]+\s+[\d,.]+\s+(\d{4}-\d{2}-\d{2})$/;
         const withoutVendor = record.match(withoutVendorPattern);
         if (!withoutVendor) return null;
 
+        const partNo = withoutVendor[1];
+        const beforeQty = withoutVendor[2].trim();
+        const qty = Number(withoutVendor[3].replace(/,/g, ""));
+        const dueDate = withoutVendor[4];
+        const firstToken = beforeQty.split(/\s+/)[0] || "";
+        const version = /^\d+$/.test(firstToken) ? firstToken : "?";
+
         return {
-          partNo: withoutVendor[1],
-          version: withoutVendor[2],
-          qty: Number(withoutVendor[3].replace(/,/g, "")),
-          dueDate: withoutVendor[4],
+          partNo,
+          version,
+          qty,
+          dueDate,
         };
       }
 
@@ -549,19 +661,277 @@ EXTRUSION
         }
       }
 
+      function formatTimestamp(value) {
+        if (!value) return "-";
+        if (typeof value.toDate === "function") {
+          return value.toDate().toLocaleString("zh-TW", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          });
+        }
+        if (value instanceof Date) {
+          return value.toLocaleString("zh-TW", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          });
+        }
+        return String(value);
+      }
+
       function renderQueryRows(rows) {
+        currentRenderedQueryRows = rows;
         queryTableBody.innerHTML = "";
+        queryTotals.classList.add("hidden");
+        let totalQty = 0;
+        let totalDelivered = 0;
 
         for (const row of rows) {
           const tr = document.createElement("tr");
+          const qtyVal = Number(row.qty || 0);
+          const deliveredVal = Number(row.deliveredQty || 0);
+          totalQty += qtyVal;
+          totalDelivered += deliveredVal;
+          const percent = qtyVal > 0 ? Math.round((deliveredVal / qtyVal) * 100) : 0;
+          let tier;
+          if (percent === 100) tier = 'full';
+          else if (percent >= 80) tier = 'high';
+          else if (percent >= 50) tier = 'mid';
+          else tier = 'low';
           tr.innerHTML = `
             <td>${row.vendorNo || "-"}</td>
             <td>${row.partNo || "-"}</td>
             <td>${row.version || "-"}</td>
-            <td class="qty">${Number(row.qty || 0).toLocaleString("en-US")}</td>
+            <td class="qty">${Number(qtyVal).toLocaleString("en-US")}</td>
             <td>${row.dueDate || "-"}</td>
+            <td>${formatTimestamp(row.updatedAt)}</td>
+            <td>
+              <div class="progress" title="已交 ${deliveredVal} / ${qtyVal}">
+                <div class="progress-bar ${tier}" style="width: ${Math.max(0, Math.min(100, percent))}%"></div>
+                <div class="progress-label">${percent}%</div>
+              </div>
+            </td>
+            <td class="qty editable delivered" contenteditable="true" data-doc-id="${row.docId}" data-max="${row.qty || 0}">${Number(deliveredVal || 0).toLocaleString("en-US")}</td>
+            <td>
+              <button class="btn-small btn-edit" data-doc-id="${row.docId}">修改</button>
+              <button class="btn-small btn-delete" data-doc-id="${row.docId}">刪除</button>
+            </td>
           `;
           queryTableBody.appendChild(tr);
+        }
+
+        if (rows.length > 0) {
+          const totalPercent = totalQty > 0 ? Math.round((totalDelivered / totalQty) * 100) : 0;
+          queryTotals.classList.remove("hidden");
+          queryTotals.textContent = `本頁總和：數量 ${totalQty.toLocaleString("en-US")}，已交 ${totalDelivered.toLocaleString("en-US")}，完成率 ${totalPercent}%`;
+        }
+
+        // Add event listeners for edit/delete buttons
+        document.querySelectorAll(".btn-edit").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            const docId = e.target.getAttribute("data-doc-id");
+            const row = rows.find((r) => r.docId === docId);
+            if (row) {
+              editOrderModal(row, docId);
+            }
+          });
+        });
+
+        document.querySelectorAll(".btn-delete").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            const docId = e.target.getAttribute("data-doc-id");
+            if (confirm("確定要刪除此訂單嗎？")) {
+              await deleteOrderFromFirebase(docId);
+            }
+          });
+        });
+
+        // Inline editing for deliveredQty cells
+        document.querySelectorAll('.editable.delivered').forEach((cell) => {
+          // store original value
+          cell.addEventListener('focus', (ev) => {
+            cell.dataset.original = cell.textContent.replace(/,/g, '').trim();
+          });
+
+          cell.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') {
+              ev.preventDefault();
+              cell.blur();
+            }
+            if (ev.key === 'Escape') {
+              cell.textContent = cell.dataset.original;
+              cell.blur();
+            }
+          });
+
+          cell.addEventListener('blur', async (ev) => {
+            const docId = cell.getAttribute('data-doc-id');
+            const raw = cell.textContent.replace(/,/g, '').trim();
+            const original = cell.dataset.original;
+            if (raw === original) return;
+            const val = Number(raw);
+            const max = Number(cell.getAttribute('data-max') || 0);
+            if (Number.isNaN(val) || val < 0 || val > max) {
+              alert(`已交數量必須為數字且介於 0 到 ${max} 之間`);
+              cell.textContent = Number(original || 0).toLocaleString('en-US');
+              return;
+            }
+
+            try {
+              await updateDoc(doc(db, COLLECTION_NAME, docId), {
+                deliveredQty: Number(val),
+                updatedAt: serverTimestamp(),
+              });
+              cell.textContent = Number(val).toLocaleString('en-US');
+              queryStatusEl.textContent = '已更新已交數量';
+              await loadOrdersFromFirebase();
+              showQueryPage();
+            } catch (error) {
+              const friendly = getFriendlyFirebaseError(error);
+              queryStatusEl.textContent = `更新失敗（${friendly.code}）：${friendly.detail}`;
+              console.error('Inline update error', error);
+              cell.textContent = Number(original || 0).toLocaleString('en-US');
+            }
+          });
+        });
+      }
+
+      function getExportTitle() {
+        return "查詢月份訂單";
+      }
+
+      function getFilteredSortedQueryRows() {
+        const selectedMonth = queryMonthInput.value;
+        const monthFilteredRows = selectedMonth
+          ? queryRows.filter((row) => (row.dueDate || "").startsWith(selectedMonth))
+          : queryRows;
+        return sortByDueDate(monthFilteredRows, dueDateSortOrder);
+      }
+
+      function getExportRows() {
+        const rows = getFilteredSortedQueryRows();
+        return rows.map((row) => ({
+          "vender no.": row.vendorNo || "",
+          "產品料號": row.partNo || "",
+          "版本": row.version || "",
+          "數量": Number(row.qty || 0),
+          "期望交期": row.dueDate || "",
+        }));
+      }
+
+      async function getXlsxLib() {
+        if (typeof XLSX !== "undefined") {
+          return XLSX;
+        }
+
+        try {
+          const module = await import("https://esm.run/xlsx@0.18.5");
+          return module?.default || module;
+        } catch (error) {
+          console.error("XLSX 加載失敗", error);
+          return null;
+        }
+      }
+
+      async function exportToExcel() {
+        const xlsx = await getXlsxLib();
+        if (!xlsx || !xlsx.utils || typeof xlsx.utils.json_to_sheet !== "function") {
+          queryStatusEl.textContent = "Excel 匯出功能暫時無法使用，請重整頁面後再試。";
+          return;
+        }
+
+        const exportRows = getExportRows();
+        if (exportRows.length === 0) {
+          queryStatusEl.textContent = "目前沒有資料可匯出。";
+          return;
+        }
+
+        try {
+          const wb = xlsx.utils.book_new();
+          const ws = xlsx.utils.json_to_sheet(exportRows);
+          xlsx.utils.book_append_sheet(wb, ws, getExportTitle());
+          const fileName = `${getExportTitle()}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+          xlsx.writeFile(wb, fileName);
+          queryStatusEl.textContent = "Excel 已匯出。";
+        } catch (error) {
+          console.error("Excel 匯出錯誤", error);
+          queryStatusEl.textContent = `Excel 匯出失敗：${error?.message || error}`;
+        }
+      }
+
+      async function exportToPdf() {
+        const exportRows = getExportRows();
+        if (exportRows.length === 0) {
+          queryStatusEl.textContent = "目前沒有資料可匯出。";
+          return;
+        }
+
+        try {
+          let jsPDFModule = null;
+          if (window.jspdf && typeof window.jspdf.jsPDF !== "undefined") {
+            jsPDFModule = window.jspdf;
+          } else if (window.jsPDF) {
+            jsPDFModule = { jsPDF: window.jsPDF };
+          } else {
+            jsPDFModule = await import("https://esm.run/jspdf@2.5.1");
+          }
+
+          if (!jsPDFModule || typeof jsPDFModule.jsPDF !== "function") {
+            queryStatusEl.textContent = "PDF 匯出功能暫時無法使用，請重整頁面後再試。";
+            return;
+          }
+
+          const { jsPDF } = jsPDFModule;
+          const doc = new jsPDF({ unit: "pt", format: "a4" });
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+          const title = getExportTitle();
+          const leftMargin = 40;
+          const rightMargin = 40;
+          const lineHeight = 18;
+          const maxRowsPerPage = Math.floor((pageHeight - 100) / lineHeight) - 1;
+
+          doc.setFontSize(14);
+          doc.text(title, pageWidth / 2, 40, { align: "center" });
+          doc.setFontSize(10);
+
+          const headers = ["vender no.", "產品料號", "版本", "數量", "期望交期"];
+          const positions = [leftMargin, leftMargin + 120, leftMargin + 260, leftMargin + 330, leftMargin + 390];
+          let cursorY = 70;
+
+          headers.forEach((text, index) => doc.text(text, positions[index], cursorY));
+          cursorY += lineHeight;
+          doc.setLineWidth(0.5);
+          doc.line(leftMargin, cursorY - 8, pageWidth - rightMargin, cursorY - 8);
+
+          for (let i = 0; i < exportRows.length; i += 1) {
+            if (i > 0 && i % maxRowsPerPage === 0) {
+              doc.addPage();
+              cursorY = 50;
+              headers.forEach((text, index) => doc.text(text, positions[index], cursorY));
+              cursorY += lineHeight;
+              doc.line(leftMargin, cursorY - 8, pageWidth - rightMargin, cursorY - 8);
+            }
+
+            const row = exportRows[i];
+            const values = [row["vender no."], row["產品料號"], row["版本"], String(row["數量"]), row["期望交期"]];
+            values.forEach((text, index) => doc.text(text || "", positions[index], cursorY));
+            cursorY += lineHeight;
+          }
+
+          const fileName = `訂單查詢_${new Date().toISOString().slice(0, 10)}.pdf`;
+          doc.save(fileName);
+          queryStatusEl.textContent = "PDF 已匯出。";
+        } catch (error) {
+          console.error("PDF 匯出錯誤", error);
+          queryStatusEl.textContent = `PDF 匯出失敗：${error?.message || error}`;
         }
       }
 
@@ -607,6 +977,7 @@ EXTRUSION
         queryPager.classList.add("hidden");
         parsePageBtn.classList.add("active");
         queryPageBtn.classList.remove("active");
+        localStorage.setItem("currentPage", "parse");
       }
 
       function showQueryPage() {
@@ -616,6 +987,7 @@ EXTRUSION
         parseTableSection.classList.add("hidden");
         queryPageBtn.classList.add("active");
         parsePageBtn.classList.remove("active");
+        localStorage.setItem("currentPage", "query");
       }
 
       function parseAndRender() {
@@ -683,6 +1055,7 @@ EXTRUSION
         vendorNoInput.value = "";
         rawInput.value = "";
         queryVendorNoInput.value = "";
+        queryPartNoInput.value = "";
         queryMonthInput.value = "";
       }
 
@@ -730,7 +1103,9 @@ EXTRUSION
           const writeJobs = parsedRows.map((row) =>
             addDoc(collection(db, COLLECTION_NAME), {
               ...row,
+              deliveredQty: 0,
               createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
             })
           );
 
@@ -747,6 +1122,55 @@ EXTRUSION
         }
       }
 
+      async function deleteOrderFromFirebase(docId) {
+        if (!db) {
+          queryStatusEl.textContent = "Firebase 尚未設定";
+          return;
+        }
+
+        try {
+          await deleteDoc(doc(db, COLLECTION_NAME, docId));
+          queryStatusEl.textContent = "已刪除訂單";
+          await loadOrdersFromFirebase();
+          showQueryPage();
+        } catch (error) {
+          const friendly = getFriendlyFirebaseError(error);
+          queryStatusEl.textContent = `刪除失敗（${friendly.code}）：${friendly.detail}`;
+          console.error("Delete error", error);
+        }
+      }
+
+      async function editOrderModal(row, docId) {
+        // 只允許修改已交數量
+        const maxQty = Number(row.qty || 0);
+        let deliveredDefault = typeof row.deliveredQty !== 'undefined' ? row.deliveredQty : 0;
+        let newDelivered;
+        while (true) {
+          const input = prompt(`已交數量（數字，且 >=0 且 <= ${maxQty}）`, String(deliveredDefault));
+          if (input === null) return;
+          newDelivered = Number(input);
+          if (Number.isNaN(newDelivered) || newDelivered < 0 || newDelivered > maxQty) {
+            alert(`已交數量必須為數字且介於 0 到 ${maxQty} 之間`);
+            continue;
+          }
+          break;
+        }
+
+        try {
+          await updateDoc(doc(db, COLLECTION_NAME, docId), {
+            deliveredQty: Number(newDelivered),
+            updatedAt: serverTimestamp(),
+          });
+          queryStatusEl.textContent = "已更新已交數量";
+          await loadOrdersFromFirebase();
+          showQueryPage();
+        } catch (error) {
+          const friendly = getFriendlyFirebaseError(error);
+          queryStatusEl.textContent = `更新失敗（${friendly.code}）：${friendly.detail}`;
+          console.error("Update error", error);
+        }
+      }
+
       async function loadOrdersFromFirebase() {
         if (!db) {
           queryStatusEl.textContent = "Firebase 尚未設定，請先填入 FIREBASE_CONFIG。";
@@ -754,26 +1178,47 @@ EXTRUSION
         }
 
         const queryVendorNo = queryVendorNoInput.value.trim();
+        const queryPartNo = queryPartNoInput.value.trim();
 
         loadOrdersBtn.disabled = true;
         loadOrdersBtn.textContent = "載入中...";
 
         try {
           const baseCollection = collection(db, COLLECTION_NAME);
-          const source = queryVendorNo
-            ? query(baseCollection, where("vendorNo", "==", queryVendorNo))
-            : baseCollection;
+          let source;
+
+          if (queryVendorNo) {
+            // 優先按 vender no. 查詢
+            source = query(baseCollection, where("vendorNo", "==", queryVendorNo));
+          } else if (queryPartNo) {
+            // 如果沒有 vender no.，按產品料號查詢
+            source = query(baseCollection, where("partNo", "==", queryPartNo));
+          } else {
+            // 都沒有則加載全部
+            source = baseCollection;
+          }
+
           const snapshot = await getDocs(source);
-          queryRows = snapshot.docs.map((doc) => doc.data());
+          queryRows = snapshot.docs.map((doc) => ({
+            docId: doc.id,
+            ...doc.data(),
+          }));
           currentPage = 1;
           applyQueryView();
+          showQueryPage();
+          
           const selectedMonth = queryMonthInput.value;
           const afterMonthFilter = selectedMonth
             ? queryRows.filter((row) => (row.dueDate || "").startsWith(selectedMonth)).length
             : queryRows.length;
-          queryStatusEl.textContent = queryVendorNo
-            ? `vender no. ${queryVendorNo} 查詢結果：${afterMonthFilter} 筆`
-            : `已載入 ${afterMonthFilter} 筆資料`;
+
+          if (queryVendorNo) {
+            queryStatusEl.textContent = `vender no. ${queryVendorNo} 查詢結果：${afterMonthFilter} 筆`;
+          } else if (queryPartNo) {
+            queryStatusEl.textContent = `產品料號 ${queryPartNo} 查詢結果：${afterMonthFilter} 筆`;
+          } else {
+            queryStatusEl.textContent = `已載入 ${afterMonthFilter} 筆資料`;
+          }
         } catch (error) {
           const friendly = getFriendlyFirebaseError(error);
           queryStatusEl.textContent = `讀取失敗（${friendly.code}）：${friendly.detail}`;
@@ -830,6 +1275,8 @@ EXTRUSION
         loadOrdersFromFirebase();
       });
       loadOrdersBtn.addEventListener("click", loadOrdersFromFirebase);
+      exportExcelBtn.addEventListener("click", exportToExcel);
+      exportPdfBtn.addEventListener("click", exportToPdf);
       dueDateSortBtn.addEventListener("click", () => {
         dueDateSortOrder = dueDateSortOrder === "asc" ? "desc" : "asc";
         dueDateSortBtn.textContent = dueDateSortOrder === "asc" ? "近→遠" : "遠→近";
@@ -868,7 +1315,14 @@ EXTRUSION
       resetInputs();
       setStatus("請先輸入 vender no. 與資料後再解析。");
       updateAuthDomainHint();
-      showParsePage();
+      
+      // 根據保存的頁面狀態恢復
+      const savedPage = localStorage.getItem("currentPage");
+      if (savedPage === "query") {
+        showQueryPage();
+      } else {
+        showParsePage();
+      }
     </script>
   </body>
 </html>
